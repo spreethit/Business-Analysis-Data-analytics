@@ -1,0 +1,147 @@
+/*Query1*/
+
+WITH sub
+AS (SELECT
+  c.categoryid,
+  c.categoryname,
+  p.productname,
+  SUM(od.quantity) AS totalorder
+FROM products p
+JOIN Categories c
+  ON p.categoryid = c.categoryid
+JOIN OrderDetails od
+  ON od.productid = p.productid
+GROUP BY 1,
+         2,
+         3
+ORDER BY 1, 2)
+SELECT
+  t1.categoryid,
+  t1.categoryname,
+  t1.productname,
+  t1.totalorder,
+  COUNT(*) rank
+FROM sub t1
+JOIN sub t2
+  ON t1.categoryid = t2.categoryid
+  AND t1.totalorder <= t2.totalorder
+GROUP BY 1,
+         2,
+         3
+HAVING rank < 4
+ORDER BY 1, 2, 5;
+
+/*Query2*/
+
+SELECT
+  c.categoryID,
+  c.categoryname,
+  ROUND(SUM((od.unitprice - od.discount) * od.quantity)) Total_sales_amount
+FROM Categories c
+JOIN Products p
+  ON c.categoryid = p.categoryid
+JOIN OrderDetails od
+  ON p.productid = od.productid
+GROUP BY 1,
+         2
+ORDER BY 1;
+
+/*Query3*/
+
+WITH t1 AS
+  (SELECT p.productID,
+          p.productname,
+          ROUND(SUM((od.unitprice - od.discount) * od.quantity)) total_sales
+   FROM Products p
+   JOIN OrderDetails od ON p.productid = od.productid
+   GROUP BY 1,
+            2
+   ORDER BY 3 DESC
+   LIMIT 3),
+     t2 AS
+  (SELECT p.productid,
+          p.productname,
+          strftime('%m', orderdate) AS month_num,
+          CASE strftime('%m', date(o.orderdate))
+              WHEN '01' THEN 'January'
+              WHEN '02' THEN 'February'
+              WHEN '03' THEN 'March'
+              WHEN '04' THEN 'April'
+              WHEN '05' THEN 'May'
+              WHEN '06' THEN 'June'
+              WHEN '07' THEN 'July'
+              WHEN '08' THEN 'August'
+              WHEN '09' THEN 'September'
+              WHEN '10' THEN 'October'
+              WHEN '11' THEN 'November'
+              WHEN '12' THEN 'December'
+              ELSE ''
+          END AS MONTH,
+          COUNT(*) numoforders,
+          ROUND(SUM((od.unitprice - od.discount) * od.quantity)) sales_amt
+   FROM orders o
+   JOIN OrderDetails od ON o.orderid = od.orderid
+   JOIN Products p ON p.productid = od.productid
+   GROUP BY 1,
+            2,
+            3),
+     t3 AS
+  (SELECT t1.productID,
+          t1.productname,
+          t2.month_num,
+          t2.month,
+          t2.numoforders,
+          t2.sales_amt
+   FROM t1
+   JOIN t2 ON t1.productID = t2.productID
+   GROUP BY 1,
+            2,
+            3)
+SELECT t3.productname Product_name,
+       t3.month Name_of_Month,
+       t3.numoforders Number_of_orders,
+       t3.sales_amt Sales_amt
+FROM t3;
+
+/*Query4*/
+SELECT
+  c.categoryname,
+  s.country,
+  COUNT(s.companyname) num_of_suppliers
+FROM products p
+JOIN suppliers s
+  ON p.supplierid = s.supplierid
+JOIN Categories c
+  ON c.categoryid = p.categoryid
+GROUP BY 1,
+         2
+ORDER BY 1;
+
+/*Query5*/
+WITH t1
+AS (SELECT
+  c.categoryname,
+  ROUND(AVG((od.unitprice - od.discount) * od.quantity)) avg_sales
+FROM products p
+JOIN Categories c
+  ON c.categoryid = p.categoryid
+JOIN OrderDetails od
+  ON od.productid = p.productid
+GROUP BY 1)
+
+SELECT
+  t1.categoryname,
+  t1.avg_sales,
+  CASE
+    WHEN t1.avg_sales > (SELECT
+        AVG(t1.avg_sales)
+      FROM t1) THEN 'Above Average sales'
+    ELSE 'Below Average sales'
+  END Performance
+FROM t1
+ORDER BY 3;
+
+
+
+
+
